@@ -1,0 +1,11 @@
+{
+  "name": "todo",
+  "version": "1.0.0",
+  "scripts": {
+    "tw:watch": "npx tailwindcss -i .development/css/tailwind.css -o src/public/css/style.css --minify --watch"
+  },
+  "author": "Jomariel Gaitera <jojogaitera@gmail.com>",
+  "devDependencies": {
+    "tailwindcss": "^3.1.8"
+  }
+}

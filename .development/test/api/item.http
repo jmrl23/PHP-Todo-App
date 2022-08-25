@@ -1,0 +1,18 @@
+### CREATE
+curl -X POST -H "Content-Type: application/json" http://localhost/todo/api/item/create --data '{ "content": "test" }'
+
+### READ: Single document
+@itemId = 'd19b4873-248b-11ed-b293-00e070aa8954'
+curl -X GET http://localhost/todo/api/item/read/{{itemId}}
+
+### READ: All
+curl -X GET http://localhost/todo/api/item/read
+
+### UPDATE: Content
+curl -X PATCH -H "Content-Type: application/json" http://localhost/todo/api/item/update/{{itemId}}/content --data '{ "content": "new content" }'
+
+### UPDATE: IS_DONE
+curl -X PATCH -H "Content-Type: application/json" http://localhost/todo/api/item/update/{{itemId}}/status --data '{ "is_done": true }'
+
+### DELETE
+curl -X DELETE http://localhost/todo/api/item/delete/{{itemId}}
