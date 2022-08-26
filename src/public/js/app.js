@@ -1,190 +1,167 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import Api, { RequestMethod } from './Api.js';
 ~function () {
-
-  const createForm = document.querySelector('#create-form')
-  const itemContainer = document.querySelector('#item-container')
-
-  createForm.addEventListener('submit', e => {
-    e.preventDefault()
-    const content = createForm.input.value.trim()
-    if (!content) return
-    createForm.input.value = ''
-    createForm.input.blur()
-    createTodo(content)
-  })
-
-  bindDeleteToButtons()
-  bindUpdateButtons()
-
-  function generateItemPlaceholder() {
-    itemContainer.innerHTML += `
-    <div class="shadow-md bg-gray-100 rounded-lg p-4 flex mb-4" id="item-placeholder">
-      <span class="grow bg-white p-4 rounded-lg border border-gray-200 w-8/12 text-ellipsis overflow-hidden">
-        📃 List is empty.
-      </span>
-    </div>
-    `
-  }
-
-  function safeHTML(html) {
-    const map = {
-      '&': '&#38;',
-      '"': '&#34;',
-      '\'': '&#39;',
-      '<': '&lt;',
-      '>': '&gt;'
+    const itemAPI = new Api('item');
+    const createForm = document.querySelector('#create-form');
+    const itemsContainer = document.querySelector('#item-container');
+    createForm === null || createForm === void 0 ? void 0 : createForm.addEventListener('submit', createItem);
+    function createItem(e) {
+        return __awaiter(this, void 0, void 0, function* () {
+            e.preventDefault();
+            const content = this.input.value.trim();
+            if (!content)
+                return;
+            this.input.value = '';
+            const { error, document: item } = yield itemAPI.makeRequest(RequestMethod.post, 'create', { content });
+            if (error)
+                return alert(error);
+            const placeholder = document.querySelector('#item-placeholder');
+            if (placeholder)
+                placeholder.remove();
+            insertItem(item);
+        });
     }
-    return html.replace(/[\&\"\'\<\>]/g, e => map[e])
-  }
-
-  function bindUpdateButtons() {
-    const updateButtons = document.querySelectorAll('.update-btn')
-    for (const button of updateButtons) {
-      const itemContent = button.parentElement.parentElement.querySelector('.item-content')
-
-      const container = button.parentElement.parentElement
-      const itemId = container.dataset.itemId
-      let htmlContent = itemContent.innerHTML
-
-      itemContent.addEventListener('blur', async () => {
-        itemContent.classList.remove('border-blue-500')
-        if (!itemContent.innerText) return itemContent.innerHTML = htmlContent
-        if (!!+container.dataset.isDone) itemContent.classList.add('line-through')
-        itemContent.removeAttribute('contenteditable')
-        const content = itemContent.innerText.trim()
-        try {
-          const response = await fetch(`api/item/update/${itemId}/content`, {
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            method: 'PATCH',
-            body: JSON.stringify({ content })
-          })
-          const { error, document: item } = await response.json()
-          if (error) return alert(error)
-          itemContent.innerHTML = safeHTML(item.content)
-          htmlContent = itemContent.innerHTML
-        } catch (error) {
-          alert(error)
-        }
-      })
-
-      itemContent.addEventListener('keydown', e => {
+    function backupContent(e) {
         if (e.key === 'Enter') {
-          e.preventDefault()
-          itemContent.innerHTML = itemContent.innerHTML.trim()
-          itemContent.blur()
-          return
+            e.preventDefault();
+            this.innerText = this.innerText.trim();
+            return this.blur();
         }
-        if (itemContent.innerText) htmlContent = itemContent.innerHTML
-      })
-
-      itemContent.addEventListener('click', async () => {
-        if (itemContent.hasAttribute('contenteditable')) return
-        const isDone = !!+container.dataset.isDone
-        try {
-          const response = await fetch(`api/item/update/${itemId}/status`, {
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            method: 'PATCH',
-            body: JSON.stringify({ is_done: !isDone })
-          })
-          const { error, document: item } = await response.json()
-          if (error) return alert(error)
-          container.dataset.isDone = item.isDone
-          if (item.isDone) return itemContent.classList.add('line-through')
-          itemContent.classList.remove('line-through')
-        } catch (error) {
-          alert(error.message)
-        }
-      })
-
-      itemContent.addEventListener('focus', () => {
-        itemContent.classList.remove('line-through')
-
-        if (typeof window.getSelection != 'undefined' && typeof document.createRange != 'undefined') {
-          const range = document.createRange()
-          range.selectNodeContents(itemContent)
-          range.collapse(false)
-          const selection = window.getSelection()
-          selection.removeAllRanges()
-          selection.addRange(range)
-        } else if (typeof document.body.createTextRange != 'undefined') {
-          const textRange = document.body.createTextRange()
-          textRange.moveToElementText(itemContent)
-          textRange.collapse(false)
-          textRange.select()
-        }
-      })
-
-      button.addEventListener('click', () => {
-        itemContent.setAttribute('contenteditable', true)
-        itemContent.classList.add('border-blue-500')
-        itemContent.focus()
-      })
+        const content = this.innerText.trim();
+        if (content.length > 0)
+            this.dataset.previousContent = content;
     }
-  }
-
-  function bindDeleteToButtons() {
-    const deleteButtons = document.querySelectorAll('.delete-btn')
-    for (const button of deleteButtons) {
-      button.addEventListener('click', async () => {
-        if (!confirm('Remove this item?')) return
-        const container = button.parentElement.parentElement
-        const itemId = container.dataset.itemId
-        try {
-          const response = await fetch(`api/item/delete/${itemId}`, {
-            method: 'DELETE'
-          })
-          const { error } = await response.json()
-          if (error) return alert(error)
-          container.remove()
-          if (!document.querySelector('#item-placeholder') && itemContainer.childElementCount < 1)
-            generateItemPlaceholder()
-        } catch (error) {
-          alert(error.message)
+    function updateContent(e) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const content = this.innerText.trim();
+            const container = this.parentElement;
+            const { itemId, isDone } = container.dataset;
+            this.classList.remove('border-blue-500');
+            if (isDone === '1')
+                this.classList.add('line-through');
+            this.removeAttribute('contenteditable');
+            if (content.length < 1) {
+                this.innerText = this.dataset.previousContent;
+                return;
+            }
+            const { error, document: item } = yield itemAPI.makeRequest(RequestMethod.patch, `update/${itemId}/content`, { content });
+            if (error)
+                return alert(error);
+            const { content: c } = item;
+            this.innerText = c;
+        });
+    }
+    function updateStatus(e) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.hasAttribute('contenteditable'))
+                return;
+            const container = this.parentElement;
+            const { itemId, isDone } = container.dataset;
+            const is_done = !(isDone === '1');
+            const { error, document: item } = yield itemAPI.makeRequest(RequestMethod.patch, `update/${itemId}/status`, { is_done });
+            if (error)
+                return alert(error);
+            const { isDone: i } = item;
+            if (i === 1)
+                this.classList.add('line-through');
+            else
+                this.classList.remove('line-through');
+            container.dataset.isDone = i;
+        });
+    }
+    function deleteItem() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!confirm('Remove this item?'))
+                return;
+            const container = this.parentElement.parentElement;
+            const itemId = container.dataset.itemId;
+            const { error } = yield itemAPI.makeRequest(RequestMethod.delete, `delete/${itemId}`);
+            if (error)
+                return alert(error);
+            container.remove();
+            if (itemsContainer.childElementCount < 1)
+                generateItemPlaceholder();
+        });
+    }
+    function enableEdit() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const container = this.parentElement.parentElement;
+            const itemContent = container.querySelector('.item-content');
+            itemContent.setAttribute('contenteditable', true);
+            itemContent.classList.add('border-blue-500');
+            itemContent.classList.remove('line-through');
+            itemContent.focus();
+            if (typeof window.getSelection != 'undefined' && typeof document.createRange != 'undefined') {
+                const range = document.createRange();
+                range.selectNodeContents(itemContent);
+                range.collapse(false);
+                const selection = window.getSelection();
+                selection === null || selection === void 0 ? void 0 : selection.removeAllRanges();
+                selection === null || selection === void 0 ? void 0 : selection.addRange(range);
+            }
+        });
+    }
+    function insertItem(item) {
+        const { itemId, content, isDone } = item;
+        const mainContainer = document.createElement('div');
+        mainContainer.className = 'shadow-md bg-gray-100 rounded-lg p-4 flex mb-4';
+        mainContainer.dataset.itemId = itemId;
+        mainContainer.dataset.isDone = `${isDone}`;
+        const contentContainer = document.createElement('span');
+        contentContainer.className = 'item-content grow bg-white p-4 rounded-lg border border-gray-200 w-8/12 text-ellipsis overflow-hidden';
+        if (isDone)
+            contentContainer.classList.add('line-through');
+        contentContainer.append(document.createTextNode(content));
+        contentContainer.addEventListener('blur', updateContent);
+        contentContainer.addEventListener('click', updateStatus);
+        contentContainer.addEventListener('keyup', backupContent);
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.className = 'w-auto ml-4 text-white text-center flex flex-col';
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-btn bg-red-500 rounded-t-lg px-2 py-1 hover:bg-red-600';
+        deleteButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        deleteButton.addEventListener('click', deleteItem);
+        const updateButton = document.createElement('button');
+        updateButton.className = 'update-btn bg-blue-500 rounded-b-lg px-2 py-1 hover:bg-blue-700';
+        updateButton.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
+        updateButton.addEventListener('click', enableEdit);
+        buttonsContainer.append(deleteButton, updateButton);
+        mainContainer.append(contentContainer, buttonsContainer);
+        itemsContainer.append(mainContainer);
+    }
+    function generateItemPlaceholder() {
+        if (document.querySelector('#item-placeholder'))
+            return;
+        const container = document.createElement('div');
+        container.className = 'shadow-md bg-gray-100 rounded-lg p-4 flex mb-4';
+        container.id = 'item-placeholder';
+        const contentContainer = document.createElement('span');
+        contentContainer.className = 'grow bg-white p-4 rounded-lg border border-gray-200 w-8/12 text-ellipsis overflow-hidden';
+        contentContainer.append(document.createTextNode('📃 List is empty.'));
+        container.append(contentContainer);
+        itemsContainer.append(container);
+    }
+    ~function initialize() {
+        const itemContents = document.querySelectorAll('.item-content');
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        const updateButtons = document.querySelectorAll('.update-btn');
+        for (let index = 0; index < itemContents.length; index++) {
+            const itemContent = itemContents[index];
+            const deleteButton = deleteButtons[index];
+            const updateButton = updateButtons[index];
+            itemContent.addEventListener('blur', updateContent);
+            itemContent.addEventListener('keyup', backupContent);
+            itemContent.addEventListener('click', updateStatus);
+            deleteButton.addEventListener('click', deleteItem);
+            updateButton.addEventListener('click', enableEdit);
         }
-      })
-    }
-  }
-
-  function outputDocument(item) {
-    const itemPlaceholder = itemContainer.querySelector('#item-placeholder')
-    if (itemPlaceholder) itemPlaceholder.remove()
-    itemContainer.innerHTML += `
-    <div class="shadow-md bg-gray-100 rounded-lg p-4 flex mb-4" data-item-id="${item.itemId}" data-is-done="${parseInt(item.isDone)}">
-      <span class="item-content ${item.isDone ? 'line-through ' : ''}grow bg-white p-4 rounded-lg border border-gray-200 w-8/12 text-ellipsis overflow-hidden">
-        ${safeHTML(item.content)}
-      </span>
-      <div class="w-auto ml-4 text-white text-center flex flex-col">
-        <button class="delete-btn bg-red-500 rounded-t-lg px-2 py-1 hover:bg-red-600">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-        <button class="update-btn bg-blue-500 rounded-b-lg px-2 py-1 hover:bg-blue-700">
-          <i class="fa-solid fa-pen-to-square"></i>
-        </button>
-      </div>
-    </div>
-    `
-    bindDeleteToButtons()
-    bindUpdateButtons()
-  }
-
-  async function createTodo(content) {
-    try {
-      const response = await fetch('api/item/create', {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        method: 'POST',
-        body: JSON.stringify({ content })
-      })
-      const { error, document: item } = await response.json()
-      if (error) return alert(error)
-      outputDocument(item)
-    } catch (error) {
-      alert(error.message)
-    }
-  }
-
-}()
+    }();
+}();

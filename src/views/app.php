@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="theme-color" content="#3b82f6" />
   <title>Todo</title>
-  <link rel="shortcut icon" href="<?= $baseURL ?>favicon.ico" type="image/x-icon"/>
+  <link rel="shortcut icon" href="<?=$baseURL?>favicon.ico" type="image/x-icon"/>
   <link rel="stylesheet" href="<?=$baseURL?>css/style.css" />
-  <script src="<?=$baseURL?>js/app.js" defer></script>
+  <script src="<?=$baseURL?>js/app.js" type="module" defer></script>
 </head>
 <body>
   <main class="container">
@@ -22,7 +22,6 @@
         </button>
       </form>
     </header>
-
     <div class="h-[calc(100vh-7rem)]">
       <div class="py-4 h-full overflow-hidden">
         <div class="h-full overflow-auto" id="item-container">
